@@ -1,6 +1,7 @@
 package org.example.lab1;
 
 import java.io.*;
+import java.util.Arrays;
 
 public class Data {
 
@@ -106,41 +107,111 @@ public class Data {
     // Calculating
 
     // muls
-    public static double[] multiplyVecMat(double[] vec, double[][] mat) {
-
+    public static double[] multiplyVecMatKahan(double[] vec, double[][] mat) {
+        int n = mat.length;
+        double[] y = new double[n];
+        for(int i = 0; i < n; ++i) {
+            y[i] = dotKahan(mat[i], vec);
+        }
+        return y;
     }
 
-    public static double[][] multiplyMatrices(double[][] mat1, double[][] mat2) {
-        return ;
+    public static double[][] multiplyMatricesKahan(double[][] mat1, double[][] mat2) {
+        double[][] resultM = new double[mat1.length][mat2[0].length];
+        double sum;
+        double c;
+        for(int i = 0; i < mat1.length; ++i) {
+            for(int j = 0; j < mat1[0].length; ++j) {
+                sum = 0.0;
+                c = 0.0;
+                for (int k = 0; k < mat1[0].length; ++k) {
+                    double y = mat1[i][k] * mat2[k][j] - c;
+                    double t = sum + y;
+                    c = (t - sum) - y;
+                    sum = t;
+                }
+                resultM[i][j] = sum;
+            }
+        }
+        return resultM;
+    }
+
+    static double dotKahan(double[] a, double[] b) {
+        double sum = 0.0;
+        double c = 0.0;
+        for (int i = 0; i < a.length; i++) {
+            double y = a[i] * b[i] - c;
+            double t = sum + y;
+            c = (t - sum) - y;
+            sum = t;
+        }
+        return sum;
     }
 
     public static double[][] multiplyScalMat(double scal, double[][] mat) {
-        return ;
+        double[][] rMat = new double[mat.length][mat[0].length];
+        for(int i = 0; i < mat.length; ++i) {
+            for(int j = 0; j < mat[0].length; ++j) {
+                rMat[i][j] = mat[i][j] * scal;
+            }
+        }
+        return rMat;
     }
 
     // funcs
     public static double[] sortVector(double[] vec) {
-
+        double[] vec1 = vec.clone();
+        Arrays.sort(vec1);
+        return vec1;
     }
 
-    public static double[] sortVector(double[] vec) {
+    public static double[][] sortMatrix(double[][] M) {
+        int n = M.length;
+        int m = M[0].length;
 
+        // 1. Скопировать все элементы в один массив
+        double[] all = new double[n * m];
+        int idx = 0;
+        for (double[] row : M) {
+            for (double val : row) {
+                all[idx++] = val;
+            }
+        }
+
+        // 2. Отсортировать массив
+        Arrays.sort(all);
+
+        // 3. Записать обратно в матрицу построчно
+        idx = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                M[i][j] = all[idx++];
+            }
+        }
     }
 
-    public static double[] sortMatrix(double[][] vec) {
 
-    }
 
     public static double minVector(double[] vec) {
         return ;
     }
 
     // adds subs
-    public static double[] addVector(double[] vec) {
-
+    public static double[] addVector(double[] vec1, double[] vec2) {
+        double[] rVec = new double[vec1.length];
+        for(int i = 0; i < vec1.length; ++i) {
+            rVec[i] = vec1[i] + vec2[i];
+        }
+        return rVec;
     }
 
     public static double[][] subtractMatrices(double[][] mat1, double[][] mat2) {
-        return ;
+        double[][] rMat = new double[mat1.length][mat1[0].length];
+        for(int i = 0; i < mat1.length; ++i) {
+            for(int j = 0; j < mat1[0].length; ++j) {
+                rMat[i][j] = mat1[i][j] - mat2[i][j];
+            }
+        }
+        return rMat;
     }
 }
