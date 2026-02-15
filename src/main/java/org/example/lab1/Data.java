@@ -9,7 +9,7 @@ public class Data {
     static final int THREADS = 4;
     static final int RUNS = 5;
 
-    static class Bundle {
+    public static class Bundle {
         int n;
         double[][] MM, ME, MT, MZ;
         double[] D, E;
@@ -46,11 +46,9 @@ public class Data {
                 if(line.equalsIgnoreCase("MZ")) readMatrix(br, b.MZ);
                 if(line.equalsIgnoreCase("D")) readVector(br, b.D);
                 if(line.equalsIgnoreCase("E")) readVector(br, b.E);
-                        ...
             }
+            return b;
 
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -148,14 +146,12 @@ public class Data {
         return sum;
     }
 
-    public static double[][] multiplyScalMat(double scal, double[][] mat) {
-        double[][] rMat = new double[mat.length][mat[0].length];
+    public static void multiplyScalMat(double scal, double[][] mat) {
         for(int i = 0; i < mat.length; ++i) {
             for(int j = 0; j < mat[0].length; ++j) {
-                rMat[i][j] = mat[i][j] * scal;
+                mat[i][j] *= scal;
             }
         }
-        return rMat;
     }
 
     // funcs
@@ -165,35 +161,38 @@ public class Data {
         return vec1;
     }
 
-    public static double[][] sortMatrix(double[][] M) {
-        int n = M.length;
-        int m = M[0].length;
+    // sort the whole matrix, not just each distinct row
+//    public static void sortMatrix(double[][] M) {
+//        int n = M.length;
+//        int m = M[0].length;
+//
+//        double[] all = new double[n * m];
+//        int idx = 0;
+//        for (double[] row : M) {
+//            for (double val : row) {
+//                all[idx++] = val;
+//            }
+//        }
+//
+//        Arrays.sort(all);
+//
+//        idx = 0;
+//        for (int i = 0; i < n; i++) {
+//            for (int j = 0; j < m; j++) {
+//                M[i][j] = all[idx++];
+//            }
+//        }
+//    }
 
-        // 1. Скопировать все элементы в один массив
-        double[] all = new double[n * m];
-        int idx = 0;
-        for (double[] row : M) {
-            for (double val : row) {
-                all[idx++] = val;
-            }
-        }
-
-        // 2. Отсортировать массив
-        Arrays.sort(all);
-
-        // 3. Записать обратно в матрицу построчно
-        idx = 0;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
-                M[i][j] = all[idx++];
-            }
-        }
+    static void sortRowsInPlace(double[][] M) {
+        for (double[] row : M) Arrays.sort(row);
     }
 
 
-
-    public static double minVector(double[] vec) {
-        return ;
+    public static double minVector(double[] v) {
+        double min = v[0];
+        for (int i = 1; i < v.length; i++) if (v[i] < min) min = v[i];
+        return min;
     }
 
     // adds subs
@@ -213,5 +212,18 @@ public class Data {
             }
         }
         return rMat;
+    }
+
+    // copy
+
+    static double[][] deepCopyMatrix(double[][] A) {
+        int n = A.length, m = A[0].length;
+        double[][] B = new double[n][m];
+        for (int i = 0; i < n; i++) System.arraycopy(A[i], 0, B[i], 0, m);
+        return B;
+    }
+
+    static double[] deepCopyVector(double[] v) {
+        return Arrays.copyOf(v, v.length);
     }
 }
