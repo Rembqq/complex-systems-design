@@ -2,12 +2,12 @@ package org.example.lab1;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Random;
 
 public class Data {
 
-    static final int N = 200;
-    static final int THREADS = 4;
-    static final int RUNS = 5;
+    static int DEFAULT_GENERATION_N = 200;
+    //static int THREADS = 4;
 
     public static class Bundle {
         int n;
@@ -80,26 +80,27 @@ public class Data {
     // Write
 
     static void writeMatrix(String path, double[][] M) throws IOException {
-
-        PrintWriter pw = new PrintWriter(new FileWriter(path));
-        for(int i = 0; i < M.length; ++i) {
-            StringBuilder sb = new StringBuilder();
-            for(int j = 0; j < M[0].length; ++j) {
-                if(j > 0) sb.append(" ");
-                sb.append(M[i][j]);
+        try(PrintWriter pw = new PrintWriter(new FileWriter(path))) {
+            for (int i = 0; i < M.length; ++i) {
+                StringBuilder sb = new StringBuilder();
+                for (int j = 0; j < M[0].length; ++j) {
+                    if (j > 0) sb.append(" ");
+                    sb.append(M[i][j]);
+                }
+                pw.println(sb);
             }
-            pw.println(sb);
         }
     }
 
-    static void writeVector(BufferedReader br, double[] V) throws IOException {
-
-        String line = br.readLine();
-        while(line != null && line.trim().isEmpty()) line = br.readLine();
-        if(line == null) throw new IOException("Unexpected EOF while reading matrix");
-        String[] toks = line.trim().split("\\s+");
-        if(toks.length != V.length) throw new IOException("Matrix row length mismatch");
-        for (int i = 0; i < V.length; i++) V[i] = Double.parseDouble(toks[i]);
+    static void writeVector(String path, double[] V) throws IOException {
+        try(PrintWriter pw = new PrintWriter(new FileWriter(path))) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < V.length; ++i) {
+                if (i > 0) sb.append(" ");
+                sb.append(V[i]);
+            }
+            pw.println(sb);
+        }
     }
 
     // Calculating
@@ -226,4 +227,53 @@ public class Data {
     static double[] deepCopyVector(double[] v) {
         return Arrays.copyOf(v, v.length);
     }
+
+    // --- CSV logging ---
+//    static void appendCSV() {
+//
+//    }
+
+
+    // --- Input generator (varied orders of magnitude) ---
+    static void generateInputFile(String filename, int n) throws IOException {
+
+        Random r = new Random(12345);
+
+        try(PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
+            pw.println(n);
+            String[] matLabels = {"MM", "ME", "MT", "MZ"};
+            String[] vecLabels = {"D", "E"};
+            for(String label : matLabels) {
+                pw.println(label);
+                for(int i = 0; i < n; ++i) {
+                    StringBuilder sb = new StringBuilder();
+                    for(int j = 0; j < n; ++j) {
+                        double elem = generateVaried(r);
+                        if (j > 0) sb.append(' ');
+                        sb.append(elem);
+                    }
+                    pw.println(sb);
+                }
+                pw.println();
+            }
+
+            for(String label : vecLabels) {
+                pw.println(label);
+                StringBuilder sb = new StringBuilder();
+                for(int i = 0; i < n; ++i) {
+                    if (i > 0) sb.append(' ');
+                    sb.append(generateVaried(r));
+                }
+                pw.println(sb);
+                pw.println();
+            }
+        }
+    }
+
+    static double generateVaried(Random r) {
+        double m = 1 + r.nextDouble() * 9;
+        int exp = r.nextInt(21) - 10;
+        return m * Math.pow(10.0, exp);
+    }
+
 }

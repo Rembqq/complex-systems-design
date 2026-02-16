@@ -30,16 +30,15 @@ public class FirstInstance {
     }
 
     List<SegmentResult> runOnce() throws Exception {
-        int n = Data.N;
-        int P = Data.THREADS;
-        int base = n / P;
+        int n = data.n;
+        int base = n / threads;
 
-        int rem = n % P;
+        int rem = n % threads;
 
-        ExecutorService pool = Executors.newFixedThreadPool(P);
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
         List<Future<SegmentResult>> futures = new ArrayList<>();
 
-        for(int t = 0, rowStart = 0; t < P; t++) {
+        for(int t = 0, rowStart = 0; t < threads; t++) {
             final int start = rowStart;
             final int size = base + (t < rem ? 1 : 0);
             rowStart += size;

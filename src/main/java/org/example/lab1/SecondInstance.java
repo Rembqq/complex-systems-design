@@ -6,6 +6,7 @@ import java.util.Arrays;
 public class SecondInstance {
     final Data.Bundle data;
     final int threads;
+    final int n;
 
     final double[][] MM_shared;
     final double[][] ME_shared;
@@ -32,24 +33,22 @@ public class SecondInstance {
         this.MZ_shared = data.MZ;
         this.D_shared = data.D;
         this.E_shared = data.E;
-        int n = data.n;
+        this.n = data.n;
         this.O_shared = new double[n];
         this.MG_shared = new double[n][n];
     }
 
     void runOnce() throws Exception {
-        int n = Data.N;
-        int P = Data.THREADS;
-        int base = n / P;
+        //int n = data.n;
+        int base = n / threads;
+        int rem = n % threads;
 
-        int rem = n % P;
-
-        Thread[] threadsArr = new Thread[P];
+        Thread[] threadsArr = new Thread[threads];
 
         // Shared scalar that threads will frequently update (to create coherence traffic)
         final double[] sharedMinHolder = new double[] { Double.POSITIVE_INFINITY };
 
-        for(int t = 0, rowStart = 0; t < P; t++) {
+        for(int t = 0, rowStart = 0; t < threads; t++) {
             final int start = rowStart;
             final int size = base + (t < rem ? 1 : 0);
             rowStart += size;
@@ -96,15 +95,69 @@ public class SecondInstance {
                     Arrays.sort(sortedDglobal);
                 }
 
-                //
+                // compute O for assigned rows, writing into O_shared in synchronized fashion
                 for(int i = 0; i < size; ++i) {
                     int globalRow = start + i;
                     double value = Data.dotKahan(MG_shared[globalRow], sortedDglobal);
+                    synchronized (oWriteLock) {
+                        O_shared[globalRow] = value;
+                    }
                 }
-                synchronized (oWriteLock) {
-                    O_shared[globalRow] = value;
+
+                // min(D+E)
+                for (int i = 0; i < nLocal; i++) {
+                    double sumDE = D_shared[i] + E_shared[i];
+                    // update sharedMinHolder under lock frequently (intentionally)
+                    synchronized (minUpdateLock) {
+                        if (sumDE < sharedMinHolder[0]) sharedMinHolder[0] = sumDE;
+                    }
                 }
+
+                // min * MM * MT
+                for (int i = 0; i < size; i++) {
+                    int globalRow = start + i;
+                    for (int j = 0; j < nLocal; j++) {
+                        double sum = 0.0, c = 0.0;
+                        for (int k = 0; k < nLocal; k++) {
+                            double prod = MM_shared[globalRow][k] * MT_shared[k][j];
+                            double y = prod - c;
+                            double tval = sum + y;
+                            c = (tval - sum) - y;
+                            sum = tval;
+                        }
+                        double val = sum * sharedMinHolder[0];
+                        // write into MG_shared (subtract later)
+                        synchronized (mgWriteLock) {
+                            MG_shared[globalRow][j] = val;
+                        }
+                    }
+                }
+
+                // MZ * ME
+                for (int i = 0; i < size; i++) {
+                    int globalRow = start + i;
+                    for (int j = 0; j < nLocal; j++) {
+                        double sum = 0.0, c = 0.0;
+                        for (int k = 0; k < nLocal; k++) {
+                            double prod = MZ_shared[globalRow][k] * ME_shared[k][j];
+                            double y = prod - c;
+                            double tval = sum + y;
+                            c = (tval - sum) - y;
+                            sum = tval;
+                        }
+                        synchronized (mgWriteLock) {
+                            MG_shared[globalRow][j] = MG_shared[globalRow][j] - sum;
+                        }
+                    }
+                }
+
             });
+            worker.setName("SharedWorker-" + t);
+            threadsArr[t] = worker;
         }
+        // start
+        for (Thread th : threadsArr) th.start();
+        // join
+        for (Thread th : threadsArr) th.join();
     }
 }
